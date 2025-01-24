@@ -13,6 +13,9 @@ _start:
     mov bp, 0x7c00
     mov sp, bp
 
+    mov si, [BOOT_DRIVE]
+    call print
+
     ; Clear interrupt flag in CPU "flags" register.
     cli
     ; Switch CPU to power-safe mode. It will stay there forever since we cleared up the interrupt flag.
