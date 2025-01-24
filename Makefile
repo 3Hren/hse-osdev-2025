@@ -25,8 +25,15 @@ bootsector.o: bootsector.nasm
 bootsector.bin: bootsector.o bootsector.ld
 	$(LD) -m elf_i386 -o $@ -Tbootsector.ld bootsector.o --oformat binary
 
-image.bin: bootsector.bin
+boot16.o: boot16.c
+	clang -c -Oz --target=i386-unknown-none-code16 $< -o $@
+
+boot16.bin: boot16.o boot16.ld
+	$(LD) -m elf_i386 -o $@ -Tboot16.ld boot16.o --oformat binary
+
+image.bin: bootsector.bin boot16.bin
 	cat $^ > $@
+	./partition.py $@ $^
 
 run: image.bin
 	qemu-system-x86_64 -nographic -drive format=raw,file=$< -serial mon:stdio
