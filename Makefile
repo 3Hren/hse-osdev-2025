@@ -15,7 +15,7 @@
 # Linker variable.
 LD=x86_64-elf-ld
 
-bootsector.o: bootsector.nasmq
+bootsector.o: bootsector.nasm
 	nasm bootsector.nasm -f elf32 -o $@
 
 bootsector.bin: bootsector.o bootsector.ld
