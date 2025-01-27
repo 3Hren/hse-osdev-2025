@@ -1,0 +1,8 @@
+BasedOnStyle: LLVM
+AllowShortFunctionsOnASingleLine: false
+ColumnLimit: 80
+IndentWidth: 4
+TabWidth: 4
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: false
