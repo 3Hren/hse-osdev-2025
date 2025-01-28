@@ -30,20 +30,19 @@ _start:
     ; completely initialize the system.
     ;
     ; Therefore, we need to load additional disk sectors into memory.
+    mov  si,  _partition_table + 0x10
+    mov  edi, _boot16
     call read_boot16_partition
 
 %ifdef DEBUG
     ; Print 2 bytes of the first 4 sectors to ensure we load correctly.
+    mov  esi, _boot16
     call print_sectors
-%endif    
+%endif
 
-    call boot16
-
-    ; Clear interrupt flag in CPU "flags" register.
-    cli
-    ; Switch CPU to power-safe mode.
-    ; It will stay there forever since we cleared up the interrupt flag.
-    hlt
+    ; Prepare arguments on stack and jump to the next program.
+    push WORD [BOOT_DRIVE]
+    jmp  boot16
 
 ; Prints "SI" content until "\0".
 print:
@@ -100,6 +99,9 @@ _print_hex_loop_end:
 
 ; Reads the next boot partition from disk into memory.
 ;
+; SI  - partition table entry address.
+; EDI - the target address.
+;
 ; https://wiki.osdev.org/Disk_access_using_the_BIOS_(INT_13h)
 ; https://wiki.osdev.org/Partition_Table
 read_boot16_partition:
@@ -107,10 +109,10 @@ read_boot16_partition:
     mov  bp, sp
 
     ; Init DAP.
-    mov si,  DAP                       ; "SI" must contain address of DAP in memory, const.
-    mov edi, _boot16                   ; "EDI" contains the target address.
-    mov cx,  [_partition_table + 0x1c] ; Sectors in second partition.
-
+    mov ax,               [si + 0x08] ; LBA number.
+    mov cx,               [si + 0x0c] ; Number of sectors.
+    mov [_DAP_START_LBA], ax          ; Copy LBA number to the DAP structure.
+    mov si,               DAP         ; "SI" must contain address of DAP in memory, const.
 _read_boot16_partition_load:
     ; Break if no sectors left to read.
     test cx, cx
@@ -196,19 +198,19 @@ _read_boot16_partition_panic:
 
 %ifdef DEBUG
 print_sectors:
-    mov cx, 0
+    mov edi, esi
+    mov cx,  4
 _print_sectors_loop:
-    cmp cx, 4
-    je  _print_sectors_loop_end
+    test cx, cx
+    jz   _print_sectors_loop_end
 
-    mov  bx, cx
-    shl  bx, 9
-    mov  si, [_boot16 + bx]
+    mov  esi, [edi]
     call print_hex
-    mov  si, MSG_NEWLINE
+    add  edi, 0x200       ; Move to the next sector.
+    mov  si,  MSG_NEWLINE
     call print
 
-    inc cx
+    dec cx
     jmp _print_sectors_loop
 _print_sectors_loop_end:
     ret
@@ -217,17 +219,21 @@ _print_sectors_loop_end:
 [bits 32]
 boot16:
     call _boot16
-    jmp  $
+    ; Clear interrupt flag in CPU "flags" register.
+    cli
+    ; Switch CPU to power-safe mode.
+    ; It will stay there forever since we cleared up the interrupt flag.
+    hlt
 
 MSG_NEWLINE:
     db 0xd, 0xa, 0
 MSG_BOOTING:
-    db "[] Boot: drive ", 0
+    db "[] MBR: drive ", 0
 MSG_DISK_READ_FAIL:
-    db "[] Boot: drive read fail", 0xd, 0xa, 0
+    db "[] MBR: drive read fail", 0xd, 0xa, 0
 %ifdef DEBUG
 DBG_MSG_DISK_READ_OK:
-    db "[] Boot: read ", 0
+    db "[] MBR: read ", 0
 DBG_MSG_COLON:
     db ":", 0
 DBG_MSG_TO:
@@ -255,5 +261,5 @@ _DAP_SEG_MEMORY_BUF:
 _DAP_START_LBA:
     dq 0x01 ; Start Logical Block Address (LBA).
 
-[extern _partition_table]
-[extern _boot16]
+_partition_table equ 0x7c00 + 446
+_boot16          equ 0x7c00 + 512
