@@ -46,3 +46,4 @@ if __name__ == "__main__":
             # Total Sectors in partition
             fh.seek(offset + 0x0C)
             fh.write(partition.to_bytes(length=4, byteorder="little"))
+            lba += partition
