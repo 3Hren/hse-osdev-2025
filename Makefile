@@ -25,19 +25,18 @@ bootsector.o: bootsector.nasm
 bootsector.bin: bootsector.o bootsector.ld
 	$(LD) -m elf_i386 -o $@ -Tbootsector.ld bootsector.o --oformat binary
 
-boot16.o: boot16.c
-	nasm boot16.nasm -f elf32 -o boot16S.o
-	clang -c -O2 -fno-builtin --target=i386-unknown-none-code16 -I submodules $< -o $@
+boot16/boot16.bin:
+	$(MAKE) -C boot16
 
-boot16.bin: boot16.o boot16.ld
-	$(LD) -m elf_i386 -o $@ -Tboot16.ld boot16.o boot16S.o --oformat binary
+boot32/boot32.bin:
+	$(MAKE) -C boot32
 
-image.bin: bootsector.bin boot16.bin
+image.bin: bootsector.bin boot16/boot16.bin boot32/boot32.bin
 	cat $^ > $@
 	./partition.py $@ $^
 
 run: image.bin
-	qemu-system-x86_64 -nographic -drive format=raw,file=$< -serial mon:stdio
+	qemu-system-x86_64 -drive format=raw,file=$< -serial mon:stdio
 
 objdump/bootsector.bin: bootsector.bin
 	$(OBJDUMP) -D -b binary -mi386 -Maddr16,data16,intel $<
@@ -51,4 +50,4 @@ dbg: image.bin
 		-ex "continue"
 
 clean:
-	rm -rf *.o *.bin *.img *.elf target
+	rm -rf **/*.o **/*.bin **/*.img **/*.elf target

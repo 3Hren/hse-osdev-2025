@@ -15,6 +15,18 @@ _start:
     mov bp, 0x7c00
     mov sp, bp
 
+    ; Zero segment registers.
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; Enable A20.
+    mov al,   2
+    out 0x92, al
+
     ; Print banner to ensure we're ok.
     mov  si, MSG_BOOTING
     call print
@@ -31,12 +43,19 @@ _start:
     ;
     ; Therefore, we need to load additional disk sectors into memory.
     mov  si,  _partition_table + 0x10
-    mov  edi, _boot16
+    mov  edi, _boot16                 ; "EDI" contains the target address.
+    call read_boot16_partition
+
+    mov  si,  _partition_table + 0x20
+    mov  edi, _boot32                 ; "EDI" contains the target address.
     call read_boot16_partition
 
 %ifdef DEBUG
     ; Print 2 bytes of the first 4 sectors to ensure we load correctly.
     mov  esi, _boot16
+    call print_sectors
+
+    mov  esi, _boot32
     call print_sectors
 %endif
 
@@ -263,3 +282,4 @@ _DAP_START_LBA:
 
 _partition_table equ 0x7c00 + 446
 _boot16          equ 0x7c00 + 512
+_boot32          equ 0x10000
