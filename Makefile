@@ -26,10 +26,11 @@ bootsector.bin: bootsector.o bootsector.ld
 	$(LD) -m elf_i386 -o $@ -Tbootsector.ld bootsector.o --oformat binary
 
 boot16.o: boot16.c
-	clang -c -Oz --target=i386-unknown-none-code16 $< -o $@
+	nasm boot16.nasm -f elf32 -o boot16S.o
+	clang -c -O2 -fno-builtin --target=i386-unknown-none-code16 -I submodules $< -o $@
 
 boot16.bin: boot16.o boot16.ld
-	$(LD) -m elf_i386 -o $@ -Tboot16.ld boot16.o --oformat binary
+	$(LD) -m elf_i386 -o $@ -Tboot16.ld boot16.o boot16S.o --oformat binary
 
 image.bin: bootsector.bin boot16.bin
 	cat $^ > $@
